@@ -178,7 +178,7 @@ function BHoctree_step!(bodies::Vector{Body})
     updateCell!(root)
     # initialize forces for each body to zero
     forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    # # calculate approximate forces
+    # calculate approximate forces
     for i in 1:num_bodies
         add_cell_force!(forces[i], bodies[i], root)
     end
@@ -209,19 +209,18 @@ function direct_summation_step!(bodies::Vector{Body})
     end
 end
 
-function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
+function plotBodies!(bodies::Vector{Body}, title0::AbstractString, label0::AbstractString)
     # plot current bodies on a canvas; return the canvas
 
     # create a beautiful 3D canvas
     plot_length = 0.6*total_length # "0.6*" to make it more beautiful
     canvas = plot3d(
         size = (1080, 720),
-        legend = false,
+        title = title0, titlefontfamily = "Times New Roman", titlefontsize = 14,
+        label = label0, legendfontfamily = "Times New Roman", legendfontsize = 12,
         xlabel = "X", ylabel = "Y", zlabel = "Z",
         xlims = (-plot_length, plot_length), ylims = (-plot_length, plot_length), zlims = (-plot_length, plot_length),
-        title = title0, titlefontfamily = "Times New Roman", titlefontsize = 14,
-        tickfontfamily = "Times New Roman", tickfontsize = 10, 
-        legendfontfamily = "Times New Roman",
+        tickfontfamily = "Times New Roman", tickfontsize = 10,
         xlabelfontfamily = "Times New Roman", xlabelfontsize = 12, 
         ylabelfontfamily = "Times New Roman", ylabelfontsize = 12,
         zlabelfontfamily = "Times New Roman", zlabelfontsize = 12,
@@ -239,4 +238,24 @@ function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
     end
     # return the canvas
     return canvas
+end
+
+function plot_edges(cell::Cell)
+    # preorder traversal the BHoctree and plot edges of non-empty leaf cells 
+    if cell.subcells != nothing # this is a branch cell
+        for subcell in cell.subcells
+            plot_edges(subcell)
+        end
+    else # this is a leaf cell (after cell update, it can not be empty)
+        # calculate the corners of the cell
+        cell_length = total_length / 2^cell.depth
+        corners = [cell.center .+ cell_length / 2 .* MVector{3, Float64}(x, y, z) for x in [-1.0, 1.0] for y in [-1.0, 1.0] for z in [-1.0, 1.0]]
+
+        # plot edges of the cell
+        edges = [(1, 2), (1, 3), (2, 4), (3, 4), (5, 6), (5, 7), (6, 8), (7, 8), (1, 5), (2, 6), (3, 7), (4, 8)]
+        for edge in edges
+            i, j = edge
+            plot!([corners[i][1], corners[j][1]],[corners[i][2], corners[j][2]],[corners[i][3], corners[j][3]], color=:blue, linewidth=line_width)
+        end
+    end
 end
