@@ -5,7 +5,7 @@
 const G = 6.67430e-11 # gravitational constant (m^3/kg/s^2)
 
 # global variables
-global mean_mass = 1e11 # average mass of the bodies (kg)
+global mean_mass = 1e13 # average mass of the bodies (kg)
 global num_bodies = 16 # number of random bodies
 global num_name = 1 # name number of the saved files
 global standard_deviation_mass = 0.0 # standard deviation of the masses of the bodies (kg); temporarily fixed

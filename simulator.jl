@@ -1,11 +1,5 @@
-# This is the file about basic features of N-body simulator.
-# Last edited by Chaos on 2023/08/26.
-# still under tests
-
-# use necessary packages
-include("using.jl")
-# use constants and global variables
-include("global.jl")
+# This is the file about a simple N-body simulator using direct summation.
+# Last edited by Chaos on 2023/08/28.
 
 # struct(s)
 struct Body

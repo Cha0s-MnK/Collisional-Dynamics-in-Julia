@@ -1,4 +1,4 @@
-# This is the main running file of N-body simulator.
+# This is the main running file of the N-body simulator.
 # Last edited by Chaos on 2023/08/27.
 
 # original paper:
@@ -12,6 +12,8 @@
 include("using.jl")
 # use constants and global variables
 include("global.jl")
+# use N-body simulator
+include("simulator.jl")
 # to use BHoctree
 include("BHoctree.jl")
 
@@ -204,5 +206,5 @@ function main_AnimationCurves()
     savefig(curves, "Results/AnimationCurves$num_name.png")
 end
 
-running_time = @elapsed main_AnimationCurves() # (s)
+running_time = @elapsed main_Curves() # (s)
 println("Running time: $running_time seconds")
