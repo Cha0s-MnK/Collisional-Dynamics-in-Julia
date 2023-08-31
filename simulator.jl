@@ -1,8 +1,14 @@
 # This is the file about a simple N-body simulator using direct summation.
-# Last edited by Chaos on 2023/08/28.
+# Last edited by Chaos on 2023/08/30.
 
-# struct(s)
+# structs
 struct Body
+    mass::Float64
+    position::MVector{3, Float64}
+    velocity::MVector{3, Float64}
+end
+
+struct Body2
     mass::Float64 
     normalized_mass::Float64
     position::MVector{3, Float64}
@@ -12,6 +18,22 @@ end
 # functions
 function generateBody()
     # generate 1 random body
+
+    # generate mass
+    mass = mean_mass
+    # generate random coordinate (uniform distribution)
+    x0 = rand() # generate a random floating-point number between 0 and 1
+    y0 = rand()
+    z0 = rand()
+    x = x0 * total_length .- total_length / 2 # switch the random number from between 0 and 1 to between -total_length/2 and total_length/2
+    y = y0 * total_length .- total_length / 2
+    z = z0 * total_length .- total_length / 2
+    # initialize velocity to zero
+    return Body(mass, MVector{3, Float64}(x, y, z), MVector{3, Float64}(0.0, 0.0, 0.0))
+end
+
+function generateBody2()
+    # generate 1 random body(Body2)
 
     # generate random mass (Gaussion distribution) and normalize it
     if standard_deviation_mass == 0 # zero deviation
@@ -78,36 +100,4 @@ function direct_summation_step!(bodies::Vector{Body})
     for i in 1:num_bodies
         updateBody!(bodies[i], forces[i])
     end
-end
-
-function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
-    # plot current bodies on a canvas; return the canvas
-
-    # create a beautiful 3D canvas
-    plot_length = 0.6*total_length # "0.6*" to make it more beautiful
-    canvas = plot3d(
-        size = (1080, 720),
-        legend = false,
-        xlabel = "X", ylabel = "Y", zlabel = "Z",
-        xlims = (-plot_length, plot_length), ylims = (-plot_length, plot_length), zlims = (-plot_length, plot_length),
-        title = title0, titlefontfamily = "Times New Roman", titlefontsize = 14,
-        tickfontfamily = "Times New Roman", tickfontsize = 10, 
-        legendfontfamily = "Times New Roman",
-        xlabelfontfamily = "Times New Roman", xlabelfontsize = 12, 
-        ylabelfontfamily = "Times New Roman", ylabelfontsize = 12,
-        zlabelfontfamily = "Times New Roman", zlabelfontsize = 12,
-        background_color = RGB(0.95, 0.95, 0.95), 
-        fg_legend = :white,
-        linealpha = 0.7, linewidth = 1, linestyle = :auto, 
-        marker = (:circle, 4),
-        grid = true,
-        color = :viridis,
-        camera = (30, 30), elevation = 30, azimuth = 30
-    )
-    # plot current bodies on the canvas
-    for body in bodies
-        scatter!(canvas, [body.position[1]], [body.position[2]], [body.position[3]], markersize=5*body.normalized_mass, color=:blue) # "5*" to make it more beautiful
-    end
-    # return the canvas
-    return canvas
 end

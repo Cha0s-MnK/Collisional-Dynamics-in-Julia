@@ -9,7 +9,6 @@
 # "OpeningAngle" is short for the "opening angle" criterion
 
 # struct(s)
-
 mutable struct Cell
     depth::Int # "0" for root cell
     center::SVector{3, Float64} # center postion of this cell
@@ -41,7 +40,7 @@ function insertBody!(body::Body, cell::Cell)
                     z_offset = ((i-1) & 4 == 0) ? center_offset : -center_offset
                     cell.subcells[i] = newCell(cell.depth+1, SVector(cell.center[1] + x_offset, cell.center[2] + y_offset, cell.center[3] + z_offset))
                 end
-                insertBody!(Body(cell.total_mass, 0.0, cell.mass_center, MVector{3, Float64}(0.0,0.0,0.0)), cell) # insert old body into subcells
+                insertBody!(Body(cell.total_mass, cell.mass_center, MVector{3, Float64}(0.0,0.0,0.0)), cell) # insert old body into subcells
                 cell.total_mass = 0.0 # only leaf cell can have "total_mass!=0" in this step
             end
         else # this cell is a branch cell
@@ -125,25 +124,5 @@ function BHoctree_step!(bodies::Vector{Body})
     # update positions and velocities of all bodies
     for i in 1:num_bodies
         updateBody!(bodies[i], forces[i])
-    end
-end
-
-function plot_edges(cell::Cell)
-    # preorder traversal the BHoctree and plot edges of non-empty leaf cells 
-    if cell.subcells != nothing # this is a branch cell
-        for subcell in cell.subcells
-            plot_edges(subcell)
-        end
-    else # this is a leaf cell (after cell update, it can not be empty)
-        # calculate the corners of the cell
-        cell_length = total_length / 2^cell.depth
-        corners = [cell.center .+ cell_length / 2 .* MVector{3, Float64}(x, y, z) for x in [-1.0, 1.0] for y in [-1.0, 1.0] for z in [-1.0, 1.0]]
-
-        # plot edges of the cell
-        edges = [(1, 2), (1, 3), (2, 4), (3, 4), (5, 6), (5, 7), (6, 8), (7, 8), (1, 5), (2, 6), (3, 7), (4, 8)]
-        for edge in edges
-            i, j = edge
-            plot!([corners[i][1], corners[j][1]],[corners[i][2], corners[j][2]],[corners[i][3], corners[j][3]], color=:blue, linewidth=line_width)
-        end
     end
 end
