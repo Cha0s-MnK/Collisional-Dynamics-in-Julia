@@ -31,8 +31,29 @@ function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
     return canvas
 end
 
-function plotCurves()
-    return plot(
+function get_distances(i::Int, distances::Matrix{Float64}, bodies1::Vector{Body}, bodies2::Vector{Body})
+    # calculate the distances; fix them; store them
+
+    for j in 1:num_bodies
+        distances[i, j] = norm(bodies2[j].position - bodies1[j].position)
+        if distances[i, j] > 0.5 * total_length # effects caused by periodic boundary conditions
+            temporary_position1 = bodies1[j].position
+            temporary_position2 = bodies2[j].position
+            # calculate the difference
+            temporary_difference = temporary_position2 - temporary_position1
+            # adjust positions based on periodic boundary conditions
+            temporary_position1 .+= (temporary_difference .> 0.5*total_length) .* total_length
+            temporary_position2 .+= (temporary_difference .< -0.5*total_length) .* total_length
+            distances[i, j] = norm(temporary_position2 - temporary_position1)
+        end
+    end
+end
+
+function plotCurves(distances::Matrix{Float64}, PNGname::AbstractString)
+    # plot curves for the time evolution of each body; save the plot as a PNG file
+
+    # create an empty plot for curves
+    curves = plot(
         size = (1080, 720),
         title = "Mass = $Mean_mass solar mass \n Side length = $TotalLength pc \n Total time = $TotalTime Julian year \n Time step = $TimeStep Julian year \n Opening angle = $theta", titlefontfamily = "Times New Roman", titlefontsize = 12,
         legendfontfamily = "Times New Roman", legendfontsize = 8,
@@ -40,6 +61,14 @@ function plotCurves()
         xlabel = "Time (Julian year)", xlabelfontfamily = "Times New Roman", xlabelfontsize = 10, 
         ylabel = "Distances (pc)", ylabelfontfamily = "Times New Roman", ylabelfontsize = 10
     )
+    # add curves for the time evolution of each body
+    for j in 1:num_bodies
+        # change the unit of the variables
+        # Time: s --> Julian year; Distances: m --> pc
+        plot!(curves, [time_step.*(1:num_steps)./Julian_year], distances[:, j]./pc, label="Body $j")
+    end
+    # save the plot as a PNG file
+    savefig(curves, PNGname)
 end
 
 function plot_edges(cell::Cell)
