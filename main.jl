@@ -1,12 +1,11 @@
-# This is the main running file of the N-body simulator.
-# Last edited by Chaos on 2023/08/31.
-
-# original paper:
-# A hierarchical O(N log N) force-calculation algorithm
-# https://www.nature.com/articles/324446a0
+# The main running file of the N-body simulator.
+# Last edited by Cha0s_MnK on 2023/09/01.
 
 # "BHoctree" is short for "Barnes & Hut oct-tree"
 # "OpeningAngle" is short for the "opening angle" criterion
+# original paper:
+# A hierarchical O(N log N) force-calculation algorithm
+# https://www.nature.com/articles/324446a0
 
 # use necessary packages as long as set constants and global variables.
 include("head.jl")
@@ -14,6 +13,8 @@ include("head.jl")
 include("simulator.jl")
 # use BHoctree
 include("BHoctree.jl")
+# use time integration functions
+include("time_integration.jl")
 # use self-defined plot functions
 include("plot.jl")
 
@@ -72,5 +73,5 @@ end
 num_steps = Int(floor(total_time/time_step))
 
 # run the selected main function and record the running time
-running_time = @elapsed main_Curves(num_steps) # (s)
+running_time = @elapsed main_AnimationCurves(num_steps) # (s)
 println("Running time: $running_time seconds")

@@ -1,20 +1,20 @@
-# This is the file about plots in a N-body simulator.
-# Last edited by Chaos on 2023/08/30.
+# Some useful plot functions in the N-body simulator.
+# Last edited by Cha0s_MnK on 2023/09/01.
 
 function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
     # plot current bodies on a canvas; return the canvas
 
     # create a beautiful 3D canvas
-    plot_length = 0.6*total_length # "0.6*" to make it more beautiful
+    plot_length = 0.5*total_length
     canvas = plot3d(
         size = (1080, 720),
         legend = false, legendfontfamily = "Times New Roman", legendfontsize = 10,
         xlims = (-plot_length, plot_length), ylims = (-plot_length, plot_length), zlims = (-plot_length, plot_length),
-        title = title0, titlefontfamily = "Times New Roman", titlefontsize = 12,
-        xticks = true, yticks = true, zticks = true, tickfontfamily = "Times New Roman", tickfontsize = 8,
-        xlabel = "X", xlabelfontfamily = "Times New Roman", xlabelfontsize = 10, 
-        ylabel = "Y", ylabelfontfamily = "Times New Roman", ylabelfontsize = 10,
-        zlabel = "Z", zlabelfontfamily = "Times New Roman", zlabelfontsize = 10,
+        title = title0, titlefontfamily = "Times New Roman", titlefontsize = 14,
+        xticks = true, yticks = true, zticks = true, tickfontfamily = "Times New Roman", tickfontsize = 10,
+        xlabel = "X", xlabelfontfamily = "Times New Roman", xlabelfontsize = 12, 
+        ylabel = "Y", ylabelfontfamily = "Times New Roman", ylabelfontsize = 12,
+        zlabel = "Z", zlabelfontfamily = "Times New Roman", zlabelfontsize = 12,
         background_color = RGB(0.95, 0.95, 0.95), 
         fg_legend = :white,
         linealpha = 0.7, linewidth = 1, linestyle = :auto, 
@@ -25,7 +25,7 @@ function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
     )
     # plot current bodies on the canvas
     for body in bodies
-        scatter!(canvas, [body.position[1]], [body.position[2]], [body.position[3]], markersize=3, color=:blue)
+        scatter!(canvas, [body.position[1]], [body.position[2]], [body.position[3]], markersize=4, color=:blue)
     end
     # return the canvas
     return canvas
