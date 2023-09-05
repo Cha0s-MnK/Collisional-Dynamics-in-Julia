@@ -1,12 +1,17 @@
-# This is the file to use BHoctree to simulate.
-# Last edited by Chaos on 2023/08/28.
+# Some functions to establish BHoctree.
+# Last edited by Cha0s_MnK on 2023/09/04.
 
+# "BHoctree" is short for "Barnes & Hut oct-tree"
+# "OpeningAngle" is short for the "opening angle" criterion
 # original paper:
 # A hierarchical O(N log N) force-calculation algorithm
 # https://www.nature.com/articles/324446a0
 
-# "BHoctree" is short for "Barnes & Hut oct-tree"
-# "OpeningAngle" is short for the "opening angle" criterion
+# reference:
+# Star Formation in Galaxy Evolution: Connecting Numerical Models to Reality
+# (Nickolay Y. Gnedin, Simon C.O. Glover, Ralf S. Klessen, Volker Springel)
+# High Performance Computing and Numerical Modelling (Volker Springel)
+# 4 Gravitational Force Calculation
 
 # struct(s)
 mutable struct Cell
@@ -81,15 +86,32 @@ end
 
 function add_cell_force!(force::MVector{3, Float64}, body::Body, cell::Cell)
     # calculate and add approximate force on a body from a cell using BHoctree
-    cell_length = total_length / 2^cell.depth
-    distance = norm(cell.mass_center - body.position) # distance scalar
+
+    cell_length = total_length / 2^cell.depth # calculate side length of this cell
+    distance = norm(cell.mass_center - body.position)
     if cell.subcells !== nothing && (cell_length/distance > theta || inCell(body, cell)) # this cell is a branch cell; it does not satisfy OpeningAngle or the body is in this cell
-        for subcell in cell.subcells # improve the resolution of force calculation
+        for subcell in cell.subcells # improve the resolution
             add_cell_force!(force, body, subcell)
         end
-    else # take force from the whole cell as an approximation
-        add_point_force!(force, body, cell.total_mass, cell.mass_center)
+    else # consider force from the whole cell as an approximation
+        force .+= get_force(body, cell.total_mass, cell.mass_center)
     end
+end
+
+function get_cell_force(body::Body, cell::Cell)::MVector{3, Float64}
+    # calculate approximate force on a body from a cell using BHoctree
+
+    force = MVector{3, Float64}(0.0, 0.0, 0.0) # initialize force to 0
+    cell_length = total_length / 2^cell.depth # calculate side length of this cell
+    distance = norm(cell.mass_center - body.position) # calculate distance scalar
+    if cell.subcells !== nothing && (cell_length/distance > theta || inCell(body, cell)) # this cell is a branch cell; it does not satisfy OpeningAngle or the body is in this cell
+        for subcell in cell.subcells # improve the resolution
+            force .+= get_cell_force(body, subcell)
+        end
+    else # consider force from the whole cell as an approximation
+        force .+= get_force(body, cell.total_mass, cell.mass_center)
+    end
+    return force
 end
 
 function inCell(body::Body, cell::Cell)

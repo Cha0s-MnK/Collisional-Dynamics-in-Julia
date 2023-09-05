@@ -1,11 +1,11 @@
-# Some useful plot functions in the N-body simulator.
-# Last edited by Cha0s_MnK on 2023/09/01.
+# Some useful plot functions about the N-body simulator.
+# Last edited by Cha0s_MnK on 2023/09/05.
 
-function plotBodies!(bodies::Vector{Body}, title0::AbstractString)
+function plotBodies(bodies::Vector{Body}, title0::AbstractString)
     # plot current bodies on a canvas; return the canvas
 
     # create a beautiful 3D canvas
-    plot_length = 0.5*total_length
+    plot_length = 0.55*total_length
     canvas = plot3d(
         size = (1080, 720),
         legend = false, legendfontfamily = "Times New Roman", legendfontsize = 10,
