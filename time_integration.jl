@@ -26,7 +26,7 @@ function RungeKutta2nd!(bodies::Vector{Body}, force_calculation!::Function)
 
     # create a matrix to store forces
     forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    # calculate k_1 of 2nd order Runge-Kutta
+    # calculate k_1 of 2nd order Runge-Kutta method
     k_11 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     k_12 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     force_calculation!(forces, bodies) # calculate gravitational forces
@@ -34,16 +34,16 @@ function RungeKutta2nd!(bodies::Vector{Body}, force_calculation!::Function)
         k_11[i] = bodies[i].velocity
         k_12[i] = forces[i] / bodies[i].mass
     end
-    # calculate k_2 of 2nd order Runge-Kutta
+    # calculate k_2 of 2nd order Runge-Kutta method
     k_21 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     k_22 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
     for i in 1:num_bodies
-        temporary_bodies[i].position += temporary_bodies[i].velocity * time_step
+        temporary_bodies[i].position += k_11[i] * time_step
     end
     force_calculation!(forces, temporary_bodies) # calculate gravitational forces
     for i in 1:num_bodies
-        k_21[i] = bodies[i].velocity + k_11[i] * time_step
+        k_21[i] = bodies[i].velocity + k_12[i] * time_step
         k_22[i] = forces[i] / bodies[i].mass
     end
     # update positions and velocities of all bodies
@@ -53,40 +53,73 @@ function RungeKutta2nd!(bodies::Vector{Body}, force_calculation!::Function)
     end
 end
 
-function RungeKutta4th!(bodies::Vector{Body}, force_calculation::Function)
-    # use 4th order Runge-Kutta
+function RungeKutta4th!(bodies::Vector{Body}, force_calculation!::Function)
+    # use 4th order Runge-Kutta method
 
-    # calculate k_1 of 4th order Runge-Kutta
+    # create a matrix to store forces
+    forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    # calculate k_1 of 4th order Runge-Kutta method
     k_11 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     k_12 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    force_calculation!(forces, bodies) # calculate gravitational forces
     for i in 1:num_bodies
-        force_calculation(forces[i], bodies, bodies[i])
-        k_11[i] .= bodies[i].velocity
-        k_12[i] .= forces[i] ./ bodies[i].mass
+        k_11[i] = bodies[i].velocity
+        k_12[i] = forces[i] / bodies[i].mass
     end
-    # calculate k_2 of 2nd order Runge-Kutta
+    # calculate k_2 of 4th order Runge-Kutta method
     k_21 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     k_22 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
     temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
     for i in 1:num_bodies
-        temporary_bodies[i].position .+= temporary_bodies[i].velocity .* time_step
+        temporary_bodies[i].position += k_11[i] * time_step / 2
     end
+    force_calculation!(forces, temporary_bodies) # calculate gravitational forces
     for i in 1:num_bodies
-        force_calculation(forces[i], temporary_bodies, temporary_bodies[i])
-        k_21[i] .= bodies[i].velocity .+ k_11[i] .* time_step
-        k_22[i] .= forces[i] ./ bodies[i].mass
+        k_21[i] = bodies[i].velocity + k_12[i] * time_step / 2
+        k_22[i] = forces[i] / bodies[i].mass
+    end
+    # calculate k_3 of 4th order Runge-Kutta method
+    k_31 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    k_32 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
+    for i in 1:num_bodies
+        temporary_bodies[i].position += k_21[i] * time_step / 2
+    end
+    force_calculation!(forces, temporary_bodies) # calculate gravitational forces
+    for i in 1:num_bodies
+        k_31[i] = bodies[i].velocity + k_22[i] * time_step / 2
+        k_32[i] = forces[i] / bodies[i].mass
+    end
+    # calculate k_4 of 4th order Runge-Kutta method
+    k_41 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    k_42 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
+    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
+    for i in 1:num_bodies
+        temporary_bodies[i].position += k_31[i] * time_step
+    end
+    force_calculation!(forces, temporary_bodies) # calculate gravitational forces
+    for i in 1:num_bodies
+        k_41[i] = bodies[i].velocity + k_32[i] * time_step
+        k_42[i] = forces[i] / bodies[i].mass
     end
     # update positions and velocities of all bodies
     for i in 1:num_bodies
-        bodies[i].position .+= (k_11[i] + k_21[i]) .* time_step ./ 2
-        bodies[i].velocity .+= (k_12[i] + k_22[i]) .* time_step ./ 2
+        bodies[i].position += (k_11[i]/6 + k_21[i]/3 + k_31[i]/3 + k_41[i]/6) * time_step
+        bodies[i].velocity += (k_12[i]/6 + k_22[i]/3 + k_32[i]/3 + k_42[i]/6) * time_step
     end
 end
 
-function Leapfrog(body::Body,)
-    intermediate_velocity = body.velocity .+ force ./ body.mass .* time_step ./ 2
-    body.position .+= intermediate_velocity .* time_step
+function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function)
+    # use Leapfrog method
 
+    forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies] # create a matrix to store forces
+    force_calculation!(forces, bodies) # calculate gravitational forces
+    for i in 1:num_bodies
+        bodies[i].velocity += forces[i] / bodies[i].mass * time_step / 2
+        bodies[i].position += bodies[i].velocity * time_step
+    end
+    force_calculation!(forces, bodies) # calculate gravitational forces again
+    for i in 1:num_bodies
+        bodies[i].velocity += forces[i] / bodies[i].mass * time_step / 2
+    end
 end
