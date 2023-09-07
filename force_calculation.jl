@@ -1,5 +1,5 @@
 # Some functions to calculate gravitational forces for each body.
-# Last edited by Cha0s_MnK on 2023/09/04.
+# Last edited by Cha0s_MnK on 2023/09/06.
 
 # reference:
 # Star Formation in Galaxy Evolution: Connecting Numerical Models to Reality
@@ -7,31 +7,26 @@
 # High Performance Computing and Numerical Modelling (Volker Springel)
 # 4 Gravitational Force Calculation
 
-function add_point_force!(force::MVector{3, Float64}, body::Body, mass::Float64, position::MVector{3, Float64})
-    # calculate and add 1 approximate force on body using Plummer force law
-
-    soft_length = softening_coefficient*total_length
-    force .= 0.0 # reset force
-    if body.position != position # exclude the case that two positions overlap
-        displacement = position - body.position # displacement vector
-        distance = norm(displacement) # distance scalar
-        force_magnitude = G * body.mass * mass / (soft_length + distance)^2
-        force .+= force_magnitude .* displacement / distance
-    end
-end
-
 function get_force(body::Body, mass::Float64, position::MVector{3, Float64})::MVector{3, Float64}
-    # calculate approximate force on body using Plummer force law
-
-    soft_length = softening_coefficient*total_length
+    # calculate approximate force on a body using gravitational softening
+ 
     force = MVector{3, Float64}(0.0, 0.0, 0.0) # initialize force to 0
     if body.position != position # exclude the case that two positions overlap
         displacement = position - body.position # displacement vector
         distance = norm(displacement) # distance scalar
-        force_magnitude = G * body.mass * mass / (soft_length + distance)^2
-        force .+= force_magnitude .* displacement / distance
+        force_magnitude = G * body.mass * mass / (softening_length + distance)^2
+        force += force_magnitude * displacement / distance
     end
     return force
+end
+
+function bound_pairs(bodies::Vector{Body})
+    # criterion to avoid boud pairs
+
+    velocity_square = [sum(body.velocity .^ 2) for body in bodies] # calculate all velocity squares
+    mean_velocity_square = mean(velocity_square) # calculate mean velocity square
+    varepsilon = G * mean_mass / mean_velocity_square / pc # lower limit of varepsilon (pc)
+    println("varepsilon's lower limit: $varepsilon")
 end
 
 function direct_summation!(forces::Vector{MVector{3, Float64}}, bodies::Vector{Body})
@@ -46,8 +41,8 @@ function direct_summation!(forces::Vector{MVector{3, Float64}}, bodies::Vector{B
     for i in 1:num_bodies
         for j in (i+1):num_bodies
             temporary_force = get_force(bodies[i], bodies[j].mass, bodies[j].position)
-            forces[i] .+= temporary_force
-            forces[j] .-= temporary_force # Newton’s 3rd law
+            forces[i] += temporary_force
+            forces[j] -= temporary_force # Newton’s 3rd law
         end
     end
 end

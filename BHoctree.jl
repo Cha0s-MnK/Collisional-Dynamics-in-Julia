@@ -1,5 +1,5 @@
-# Some functions to establish BHoctree.
-# Last edited by Cha0s_MnK on 2023/09/04.
+# Some struct(s) and functions to establish BHoctree.
+# Last edited by Cha0s_MnK on 2023/09/06.
 
 # "BHoctree" is short for "Barnes & Hut oct-tree"
 # "OpeningAngle" is short for the "opening angle" criterion
@@ -19,17 +19,19 @@ mutable struct Cell
     center::SVector{3, Float64} # center postion of this cell
     subcells::Union{Nothing, Vector{Cell}} # subcells in this cell / Nothing (only for leaf cell)
     total_mass::Float64
-    mass_center::MVector{3, Float64} # center of mass of this cell
+    mass_center::MVector{3, Float64} # center position of mass of this cell
 end
 
 # functions
 function newCell(depth::Int, center::SVector{3, Float64})
     # create a new Cell
+
     return Cell(depth, center, nothing, 0.0, MVector(center))
 end
 
 function insertBody!(body::Body, cell::Cell)
     # insert a body into a cell
+
     while true # original recursion has been converted into a loop
         if cell.subcells === nothing # this cell is a leaf cell
             if cell.total_mass == 0 # this leaf cell is empty
@@ -56,6 +58,7 @@ end
 
 function get_subcell_index(body::Body, cell::Cell)
     # calculate index of the subcell that the body will be inserted into
+
     index = 1
     index += (body.position[1] > cell.center[1]) ? 0 : 1
     index += (body.position[2] > cell.center[2]) ? 0 : 2
@@ -65,6 +68,7 @@ end
 
 function updateCell!(cell::Cell)
     # update total_mass and mass_center of a branch cell (and all its subcells, sub-subcells...); discard empty leaf cells
+
     if cell.subcells !== nothing # this cell is a branch cell
         if cell.total_mass == 0 # this branch cell needs to be updated
             cell.subcells = filter(keep_subcell, cell.subcells) # discard empty leaf cells
@@ -72,7 +76,7 @@ function updateCell!(cell::Cell)
             for subcell in cell.subcells
                 updateCell!(subcell) # ensure that each subcell has been updated
                 cell.total_mass += subcell.total_mass
-                mass_center_numerator .+= subcell.total_mass .* subcell.mass_center
+                mass_center_numerator += subcell.total_mass .* subcell.mass_center
             end
             cell.mass_center = mass_center_numerator ./ cell.total_mass
         end
@@ -81,21 +85,8 @@ end
 
 function keep_subcell(subcell::Cell)
     # select empty leaf cells and they will return false
+
     return subcell.total_mass != 0 || subcell.subcells !== nothing
-end
-
-function add_cell_force!(force::MVector{3, Float64}, body::Body, cell::Cell)
-    # calculate and add approximate force on a body from a cell using BHoctree
-
-    cell_length = total_length / 2^cell.depth # calculate side length of this cell
-    distance = norm(cell.mass_center - body.position)
-    if cell.subcells !== nothing && (cell_length/distance > theta || inCell(body, cell)) # this cell is a branch cell; it does not satisfy OpeningAngle or the body is in this cell
-        for subcell in cell.subcells # improve the resolution
-            add_cell_force!(force, body, subcell)
-        end
-    else # consider force from the whole cell as an approximation
-        force .+= get_force(body, cell.total_mass, cell.mass_center)
-    end
 end
 
 function get_cell_force(body::Body, cell::Cell)::MVector{3, Float64}
@@ -104,18 +95,20 @@ function get_cell_force(body::Body, cell::Cell)::MVector{3, Float64}
     force = MVector{3, Float64}(0.0, 0.0, 0.0) # initialize force to 0
     cell_length = total_length / 2^cell.depth # calculate side length of this cell
     distance = norm(cell.mass_center - body.position) # calculate distance scalar
-    if cell.subcells !== nothing && (cell_length/distance > theta || inCell(body, cell)) # this cell is a branch cell; it does not satisfy OpeningAngle or the body is in this cell
+    if cell.subcells !== nothing && (cell_length/distance > theta || inCell(body, cell)) 
+        # this cell is a branch cell; it does not satisfy OpeningAngle or the body is in this cell
         for subcell in cell.subcells # improve the resolution
-            force .+= get_cell_force(body, subcell)
+            force += get_cell_force(body, subcell)
         end
     else # consider force from the whole cell as an approximation
-        force .+= get_force(body, cell.total_mass, cell.mass_center)
+        force += get_force(body, cell.total_mass, cell.mass_center)
     end
     return force
 end
 
 function inCell(body::Body, cell::Cell)
     # judge whether a body is in a cell
+
     cell_length = total_length / 2^cell.depth
     cell_min = cell.center .- cell_length/2 # 3 minimum coordinates of the cell
     cell_max = cell.center .+ cell_length/2 # 3 maximum coordinates of the cell
@@ -125,26 +118,4 @@ function inCell(body::Body, cell::Cell)
         end
     end
     return true
-end
-
-function BHoctree_step!(bodies::Vector{Body})
-    # 1 simulation step using BHoctree
-
-    # initialize root cell
-    root = newCell(0, SVector(0.0,0.0,0.0))
-    # establish BHoctree and update it
-    for body in bodies
-        insertBody!(body, root)
-    end
-    updateCell!(root)
-    # initialize forces for each body to zero
-    forces = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    # calculate approximate forces
-    for i in 1:num_bodies
-        add_cell_force!(forces[i], bodies[i], root)
-    end
-    # update positions and velocities of all bodies
-    for i in 1:num_bodies
-        updateBody!(bodies[i], forces[i])
-    end
 end

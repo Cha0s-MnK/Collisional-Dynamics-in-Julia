@@ -1,5 +1,5 @@
 # The main running file of the N-body simulator.
-# Last edited by Cha0s_MnK on 2023/09/05.
+# Last edited by Cha0s_MnK on 2023/09/06.
 
 # "BHoctree" is short for "Barnes & Hut oct-tree"
 # "OpeningAngle" is short for the "opening angle" criterion
@@ -49,10 +49,11 @@ function simulate_step!(bodies::Vector{Body}, time_integration!::Function, force
 
     time_integration!(bodies, force_calculation!)
     periodic_boundary!(bodies) # apply periodic boundary condition
+    bound_pairs(bodies) # criterion to avoid boud pairs
 end
 
 # main functions
-function main_Animation(num_steps::Int)
+function main_Test(num_steps::Int)
     # main function that simulate N-body problem using animation
 
     # generate random bodies and deepcopy it
@@ -62,24 +63,26 @@ function main_Animation(num_steps::Int)
     distances = zeros(num_steps, num_bodies)
     # simulate N-body problem in 2 different ways; store the distances; create an animation
     animation = @animate for i in 1:num_steps
-        # plot current bodies; use direct summation to simulate
-        canvas1 = plotBodies(bodies1, 
-        "Direct summation \n\n Number of bodies = $num_bodies \n Mass = $Mean_mass solar mass \n Side length = $TotalLength pc")
+        # plot current bodies; use explicit Euler and direct summation to simulate
+        canvas1 = plotBodies(bodies1,
+        "2nd order Runge-Kutta \n\n Number of bodies = $num_bodies \n Mass = $Mean_mass solar mass \n Side length = $TotalLength pc")
         simulate_step!(bodies1, RungeKutta2nd!, direct_summation!)
-        # plot current bodies; use BHoctree to simulate
+        # plot current bodies; use 2nd order Runge-Kutta and direct summation to simulate
         canvas2 = plotBodies(bodies2,
-        "BHoctree \n\n Total time = $TotalTime Julian year \n Time step = $TimeStep Julian year \n Opening angle = $theta")
-        simulate_step!(bodies2, RungeKutta2nd!, direct_summation!)
+        "Leapfrog \n\n Total time = $TotalTime Julian year \n Time step = $TimeStep Julian year")
+        simulate_step!(bodies2, Leapfrog!, direct_summation!)
         # calculate the distances; fix them; store them
         get_distances(i, distances, bodies1, bodies2)
         # plot the canvases in a 1*2 layout
         plot(canvas1, canvas2, layout = (1, 2))
     end
     # save the animation as a MP4 file
-    gif(animation, "Results/Animation$num_name.mp4", fps = 24)
+    gif(animation, "Results/TestAnimation$num_name.mp4", fps = 24)
     # plot curves for the time evolution of each body; save the plot as a PNG file
-    plotCurves(distances, "Results/AnimationCurves$num_name.png")
+    plotCurves(distances, "Results/TestCurves$num_name.png")
 end
+
+
 
 function main_Curves(num_steps::Int)
     # main function that compares direct summation and BHoctree using curves
@@ -135,5 +138,5 @@ end
 num_steps = Int(floor(total_time/time_step))
 
 # run the selected main function and record the running time
-running_time = @elapsed main_Animation(num_steps) # (s)
+running_time = @elapsed main_Test(num_steps) # (s)
 println("Running time: $running_time seconds")
