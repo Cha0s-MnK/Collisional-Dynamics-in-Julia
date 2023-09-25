@@ -1,5 +1,5 @@
 # Some useful plot functions about the N-body simulator.
-# Last edited by Cha0s_MnK on 2023/09/05.
+# Last edited by Cha0s_MnK on 2023/09/18.
 
 function plotBodies(bodies::Vector{Body}, title0::AbstractString)
     # plot current bodies on a canvas; return the canvas
@@ -25,7 +25,7 @@ function plotBodies(bodies::Vector{Body}, title0::AbstractString)
     )
     # plot current bodies on the canvas
     for body in bodies
-        scatter!(canvas, [body.position[1]], [body.position[2]], [body.position[3]], markersize=4, color=:blue)
+        scatter!(canvas, [body.position[1]], [body.position[2]], [body.position[3]], markersize=4, color=:red)
     end
     # return the canvas
     return canvas
@@ -55,8 +55,8 @@ function plotCurves(distances::Matrix{Float64}, PNGname::AbstractString)
     # create an empty plot for curves
     curves = plot(
         size = (1080, 720),
-        title = "Mass = $Mean_mass solar mass \n Side length = $TotalLength pc \n Total time = $TotalTime Julian year \n Time step = $TimeStep Julian year \n Opening angle = $theta", titlefontfamily = "Times New Roman", titlefontsize = 12,
-        legendfontfamily = "Times New Roman", legendfontsize = 8,
+        title = "Number of bodies = $num_bodies \n Mass = $Mean_mass solar mass \n Side length = $TotalLength pc \n Total time = $TotalTime Julian year \n Time step = $TimeStep Julian year \n Opening angle = $theta", titlefontfamily = "Times New Roman", titlefontsize = 12,
+        legend = false, legendfontfamily = "Times New Roman", legendfontsize = 8,
         tickfontfamily = "Times New Roman", tickfontsize = 8,
         xlabel = "Time (Julian year)", xlabelfontfamily = "Times New Roman", xlabelfontsize = 10, 
         ylabel = "Distances (pc)", ylabelfontfamily = "Times New Roman", ylabelfontsize = 10
@@ -65,17 +65,31 @@ function plotCurves(distances::Matrix{Float64}, PNGname::AbstractString)
     for j in 1:num_bodies
         # change the unit of the variables
         # Time: s --> Julian year; Distances: m --> pc
-        plot!(curves, [time_step.*(1:num_steps)./Julian_year], distances[:, j]./pc, label="Body $j")
+        plot!(curves, [time_step.*(1:num_steps)./Julian_year], distances[:, j]./pc)
     end
     # save the plot as a PNG file
     savefig(curves, PNGname)
 end
 
-function plot_edges(cell::Cell)
-    # preorder traversal the BHoctree and plot edges of non-empty leaf cells 
+function plotEdges(bodies::Vector{Body})
+    # establish BHoctree and plot the edges of the leaf cells
+
+    # establish BHoctree
+    root = newCell(0, SVector(0.0,0.0,0.0)) # initialize root cell
+    for body in bodies # insert bodies into BHoctree sequentially
+        insertBody!(body, root)
+    end
+    updateCell!(root) # calculate monopoles and discard empty cells
+    # plot the edges of the leaf cells
+    plotCellEdges(root)
+end
+
+function plotCellEdges(cell::Cell)
+    # after updating the BHoctree, preorder traversal it and plot the edges of the leaf cells
+
     if cell.subcells != nothing # this is a branch cell
         for subcell in cell.subcells
-            plot_edges(subcell)
+            plotCellEdges(subcell)
         end
     else # this is a leaf cell (after cell update, it can not be empty)
         # calculate the corners of the cell
@@ -86,7 +100,7 @@ function plot_edges(cell::Cell)
         edges = [(1, 2), (1, 3), (2, 4), (3, 4), (5, 6), (5, 7), (6, 8), (7, 8), (1, 5), (2, 6), (3, 7), (4, 8)]
         for edge in edges
             i, j = edge
-            plot!([corners[i][1], corners[j][1]],[corners[i][2], corners[j][2]],[corners[i][3], corners[j][3]], color=:blue, linewidth=line_width)
+            plot!([corners[i][1], corners[j][1]],[corners[i][2], corners[j][2]],[corners[i][3], corners[j][3]], color=:blue, linewidth=0.5)
         end
     end
 end
