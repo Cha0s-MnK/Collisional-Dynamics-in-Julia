@@ -1,5 +1,5 @@
 # Some functions to calculate gravitational forces for each body.
-# Last edited by Cha0s_MnK on 2023/09/25.
+# Last edited by Cha0s_MnK on 2023/09/26.
 
 # reference:
 # Star Formation in Galaxy Evolution: Connecting Numerical Models to Reality
@@ -55,21 +55,6 @@ function direct_summation!(bodies::Vector{Body})
             temporary_force = get_force(bodies[i], bodies[j].mass, bodies[j].position)
             bodies[i].acceleration += temporary_force ./ bodies[i].mass
             bodies[j].acceleration -= temporary_force ./ bodies[j].mass # Newton’s 3rd law
-        end
-    end
-end
-
-function direct_summation_jerk!(bodies::Vector{Body})
-    # calculate jerks for each body using direct summation
-
-    # initialize jerks for each body to zero
-    for i in 1:num_bodies
-        bodies[i].jerk .= 0.0
-    end
-    # calculate jerks for each body
-    for i in 1:num_bodies
-        for j in (i+1):num_bodies
-            get_2jerks!(bodies[i], bodies[j])
         end
     end
 end
