@@ -53,8 +53,18 @@ function generateKeplerBodies()::Vector{Body}
     # generate 2 bodies for Kepler problem
 
     # set initial positions and velocities
-    bodies = [Body(32.0*mean_mass, MVector{3, Float64}(0.4*total_length, 0.4*total_length, 0.4*total_length), MVector{3, Float64}(-0.1*km_per_s, -0.1*km_per_s, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0)),
-                Body(32.0*mean_mass, MVector{3, Float64}(-0.4*total_length, -0.4*total_length, -0.4*total_length), MVector{3, Float64}(0.1*km_per_s, 0.1*km_per_s, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0))]
+    bodies = [Body(mean_mass, MVector{3, Float64}(0.3*total_length, 0.3*total_length, 0.3*total_length), MVector{3, Float64}(-0.2*KMperS, -0.2*KMperS, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0)),
+                Body(mean_mass, MVector{3, Float64}(-0.3*total_length, -0.3*total_length, -0.3*total_length), MVector{3, Float64}(0.2*KMperS, 0.2*KMperS, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0))]
+    direct_summation!(bodies) # calculate accelerations
+    return bodies
+end
+
+function generateKeplerBodies2()::Vector{Body}
+    # generate 2 bodies for Kepler problem
+
+    # set initial positions and velocities
+    bodies = [Body(1000.0*mean_mass, MVector{3, Float64}(0.0, 0.0, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0)),
+                Body(mean_mass, MVector{3, Float64}(-0.3*total_length, -0.3*total_length, -0.3*total_length), MVector{3, Float64}(8.0*KMperS, 8.0*KMperS, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0), MVector{3, Float64}(0.0, 0.0, 0.0))]
     direct_summation!(bodies) # calculate accelerations
     return bodies
 end
@@ -185,14 +195,14 @@ function main_Kepler(num_steps::Int)
     # main function that simulate Kepler problem using animation
 
     # generate random bodies
-    bodies = generateKeplerBodies()
+    bodies = generateKeplerBodies2()
     # create a beautiful 3D canvas
     plot_length = 0.55*total_length
     canvas = plot3d(
         size = (1080, 720),
         legend = false, legendfontfamily = "Times New Roman", legendfontsize = 10,
         xlims = (-plot_length, plot_length), ylims = (-plot_length, plot_length), zlims = (-plot_length, plot_length),
-        title = "Kepler problem (Leapfrog, direct summation) \n\n Mass = $Mean_mass solar mass \n Side length = $TotalLength pc \n Total time = $TotalTime Julian year \n Timestep = $Timestep Julian year", titlefontfamily = "Times New Roman", titlefontsize = 14,
+        title = "Kepler problem (Leapfrog, direct summation) \n\n Mass = $Mean_mass solar mass \n Side length = $TotalLength pc \n Number of simulation steps = $num_steps", titlefontfamily = "Times New Roman", titlefontsize = 14,
         xticks = true, yticks = true, zticks = true, tickfontfamily = "Times New Roman", tickfontsize = 10,
         xlabel = "X", xlabelfontfamily = "Times New Roman", xlabelfontsize = 12, 
         ylabel = "Y", ylabelfontfamily = "Times New Roman", ylabelfontsize = 12,
@@ -208,17 +218,15 @@ function main_Kepler(num_steps::Int)
     # create an animation
     animation = @animate for _ in 1:num_steps
         # plot current bodies
-        scatter!(canvas, [bodies[1].position[1]], [bodies[1].position[2]], [bodies[1].position[3]], markersize=2, markerstrokewidth=0, color=:blue)
-        scatter!(canvas, [bodies[2].position[1]], [bodies[2].position[2]], [bodies[2].position[3]], markersize=2, markerstrokewidth=0, color=:red)
+        scatter!(canvas, [bodies[1].position[1]], [bodies[1].position[2]], [bodies[1].position[3]], markersize=1, markerstrokewidth=0, color=:blue)
+        scatter!(canvas, [bodies[2].position[1]], [bodies[2].position[2]], [bodies[2].position[3]], markersize=1, markerstrokewidth=0, color=:red)
         # use Leapfrog and direct summation to simulate
+        #simulate_step!(bodies, RungeKutta4th!, direct_summation!)
         simulate_step!(bodies, Leapfrog!, direct_summation!)
     end
     # save the animation as a MP4 file
     gif(animation, "Results/Kepler$num_name.mp4", fps = 24)
 end
-
-# calculate total number of simulation steps
-num_steps = Int(floor(total_time/timestep))
 
 # run the selected main function and record the running time
 running_time = @elapsed main_Kepler(num_steps) # (s)
