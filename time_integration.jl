@@ -1,4 +1,4 @@
-# Some time integration techniques to update the position and velocity of the bodies in 1 time step.
+# These are some time integration techniques to update the state of the bodies in 1 simulation step.
 # Last edited by Cha0s_MnK on 2023/09/26.
 
 # reference:
@@ -7,136 +7,90 @@
 # High Performance Computing and Numerical Modelling (Volker Springel)
 # 3 Time Integration Techniques
 
-function timestep_criterion(bodies::Vector{Body})
-    #
-
-    timestep_min = Timestep * Julian_year
-    for i in 1:num_bodies
-        individual_timestep = 1.0e2 / norm(bodies[i].acceleration)
-        timestep_min = min(timestep_min, individual_timestep)
+function timestep_criterion(bodies::Vector{Body}) # timestep criterion
+    global timestep = MaxTimestep * Julian_year # any timestep should be no larger than the user-specified maximum timestep (s)
+    for i in 1:num_bodies # find the minimum timestep
+        individual_timestep = 1.0e2 / norm(bodies[i].acceleration) # a free parameter to control the precision of simulation
+        global timestep = min(timestep, individual_timestep)
     end
-    global timestep = timestep_min / Julian_year # (Julian year)
-    global TotalTime += timestep 
-    if timestep < Timestep
-        println("New timestep = $timestep Julian year")
+    global Timestep = timestep / Julian_year # current timestep (Julian year)
+    if Timestep < MaxTimestep # print the shortened timestep
+        println("New timestep = $Timestep Julian year")
     end
-    global timestep = timestep_min
-    global total_time += timestep
+    global TotalTime += Timestep # add current timestep to the total simulation time (Julian year)
 end
 
-function explicitEuler!(bodies::Vector{Body}, force_calculation!::Function)
-    # use explicit Euler method
-
-    for i in 1:num_bodies
-        bodies[i].position += bodies[i].velocity * timestep
-        bodies[i].velocity += bodies[i].acceleration * timestep
+function explicitEuler!(bodies::Vector{Body}, force_calculation!::Function) # explicit Euler method
+    for (_, body) in enumerate(bodies)
+        body.position += body.velocity * timestep
+        body.velocity += body.acceleration * timestep
     end
-    force_calculation!(bodies) # calculate accelerations
+    force_calculation!(bodies) # calculate accelerations for future use
 end
 
-function RungeKutta2nd!(bodies::Vector{Body}, force_calculation!::Function)
-    # use 2nd order Runge-Kutta method
-
+function RungeKutta2nd!(bodies::Vector{Body}, force_calculation!::Function) # 2nd order Runge-Kutta method
+    last_positions = [copy(body.position) for body in bodies] # store last positions
+    last_velocities = [copy(body.velocity) for body in bodies] # store last velocities
     # calculate k_1 of 2nd order Runge-Kutta method
-    k_11 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_12 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    force_calculation!(bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_11[i] = bodies[i].velocity
-        k_12[i] = bodies[i].acceleration
-    end
+    k_12 = [copy(body.acceleration) for body in bodies]
     # calculate k_2 of 2nd order Runge-Kutta method
-    k_21 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_22 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
-    for i in 1:num_bodies
-        temporary_bodies[i].position += k_11[i] * timestep
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep
     end
-    force_calculation!(temporary_bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_21[i] = bodies[i].velocity + k_12[i] * timestep
-        k_22[i] = temporary_bodies[i].acceleration
-    end
+    force_calculation!(bodies) # recalculate accelerations
+    k_22 = [copy(body.acceleration) for body in bodies]
     # update positions, velocities and accelerations of all bodies
-    for i in 1:num_bodies
-        bodies[i].position += (k_11[i] + k_21[i]) * timestep / 2
-        bodies[i].velocity += (k_12[i] + k_22[i]) * timestep / 2
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep + k_12[i] * timestep^2 / 2
+        body.velocity = last_velocities[i] + (k_12[i] + k_22[i]) * timestep / 2
     end
-    force_calculation!(bodies) # calculate accelerations
+    force_calculation!(bodies) # calculate accelerations for future use
 end
 
-function RungeKutta4th!(bodies::Vector{Body}, force_calculation!::Function)
-    # use 4th order Runge-Kutta method
-
+function RungeKutta4th!(bodies::Vector{Body}, force_calculation!::Function) # 4th order Runge-Kutta method
+    last_positions = [copy(body.position) for body in bodies] # store last positions
+    last_velocities = [copy(body.velocity) for body in bodies] # store last velocities
     # calculate k_1 of 4th order Runge-Kutta method
-    k_11 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_12 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    force_calculation!(bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_11[i] = bodies[i].velocity
-        k_12[i] = bodies[i].acceleration
-    end
+    k_12 = [copy(body.acceleration) for body in bodies]
     # calculate k_2 of 4th order Runge-Kutta method
-    k_21 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_22 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
-    for i in 1:num_bodies
-        temporary_bodies[i].position += k_11[i] * timestep / 2
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep / 2
     end
-    force_calculation!(temporary_bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_21[i] = bodies[i].velocity + k_12[i] * timestep / 2
-        k_22[i] = temporary_bodies[i].acceleration
-    end
+    force_calculation!(bodies) # recalculate accelerations
+    k_22 = [copy(body.acceleration) for body in bodies]
     # calculate k_3 of 4th order Runge-Kutta method
-    k_31 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_32 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
-    for i in 1:num_bodies
-        temporary_bodies[i].position += k_21[i] * timestep / 2
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep / 2 + k_22[i] * timestep^2 / 4
     end
-    force_calculation!(temporary_bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_31[i] = bodies[i].velocity + k_22[i] * timestep / 2
-        k_32[i] = temporary_bodies[i].acceleration
-    end
+    force_calculation!(bodies) # recalculate accelerations
+    k_32 = [copy(body.acceleration) for body in bodies]
     # calculate k_4 of 4th order Runge-Kutta method
-    k_41 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    k_42 = [MVector{3, Float64}(0.0,0.0,0.0) for _ in 1:num_bodies]
-    temporary_bodies = deepcopy(bodies) # calculate the intermediate state of the bodies
-    for i in 1:num_bodies
-        temporary_bodies[i].position += k_31[i] * timestep
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep + k_32[i] * timestep^2 / 2
     end
-    force_calculation!(temporary_bodies) # calculate accelerations
-    for i in 1:num_bodies
-        k_41[i] = bodies[i].velocity + k_32[i] * timestep
-        k_42[i] = temporary_bodies[i].acceleration
-    end
+    force_calculation!(bodies) # recalculate accelerations
+    k_42 = [copy(body.acceleration) for body in bodies]
     # update positions, velocities and accelerations of all bodies
-    for i in 1:num_bodies
-        bodies[i].position += (k_11[i]/6 + k_21[i]/3 + k_31[i]/3 + k_41[i]/6) * timestep
-        bodies[i].velocity += (k_12[i]/6 + k_22[i]/3 + k_32[i]/3 + k_42[i]/6) * timestep
+    for (i, body) in enumerate(bodies)
+        body.position = last_positions[i] + last_velocities[i] * timestep + (k_12[i] + k_22[i] + k_32[i]) / 6 * timestep^2
+        body.velocity = last_velocities[i] + (k_12[i] + 2*k_22[i] + 2*k_32[i] + k_42[i]) / 6 * timestep
     end
-    force_calculation!(bodies) # calculate accelerations
+    force_calculation!(bodies) # calculate accelerations for future use
 end
 
-function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function)
-    # use Leapfrog method
-
-    for i in 1:num_bodies
-        bodies[i].velocity += bodies[i].acceleration .* timestep ./ 2
-        bodies[i].position += bodies[i].velocity .* timestep
+function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function) # use Leapfrog method (KDK)
+    for body in bodies
+        body.velocity += body.acceleration * timestep / 2 # half step velocity update (Kick)
+        body.position += body.velocity * timestep # full step position update (Drift)
     end
-    force_calculation!(bodies) # calculate accelerations
-    for i in 1:num_bodies
-        bodies[i].velocity += bodies[i].acceleration .* timestep ./ 2
+    force_calculation!(bodies) # recalculate accelerations
+    for body in bodies
+        body.velocity += body.acceleration * timestep / 2 # half step velocity update (Kick)
     end
-    force_calculation!(bodies) # calculate accelerations again
+    force_calculation!(bodies) # calculate accelerations for future use
 end
 
-function modified4thHermite!(bodies::Vector{Body}, force_calculation!::Function)
-    # use modified 4th-order Hermite method
-
+function modified4thHermite!(bodies::Vector{Body}, force_calculation!::Function) # modified 4th-order Hermite method
     # calculate jerks
     direct_summation_jerk!(bodies)
     # calculate the intermediate state
