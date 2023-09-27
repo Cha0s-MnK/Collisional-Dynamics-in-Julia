@@ -1,11 +1,11 @@
 # This is the main running file of the collisional N-body simulator.
-# Last edited by Cha0s_MnK on 2023/09/26.
+# Last edited by Cha0s_MnK on 2023/09/27.
 
 include("head.jl") # use necessary packages as long as set constants and global variables.
 include("BHoctree.jl") # use BHoctree
 include("time_integration.jl") # use time integration techniques
 include("force_calculation.jl") # use gravitational force calculation methods
-include("plot.jl") # use self-defined plot functions
+include("helper.jl") # use some self-defined functions
 
 # basic functions of the N-body simulator
 function generateBody()::Body # generate 1 random body

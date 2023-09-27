@@ -1,11 +1,14 @@
 # These are some time integration techniques to update the state of the bodies in 1 simulation step.
-# Last edited by Cha0s_MnK on 2023/09/26.
+# Last edited by Cha0s_MnK on 2023/09/27.
 
-# reference:
-# Star Formation in Galaxy Evolution: Connecting Numerical Models to Reality
-# Nickolay Y. Gnedin, Simon C.O. Glover, Ralf S. Klessen, Volker Springel
+# reference(s):
+
+# Star Formation in Galaxy Evolution: Connecting Numerical Models to Reality (Nickolay Y. Gnedin, Simon C.O. Glover, Ralf S. Klessen, Volker Springel)
 # High Performance Computing and Numerical Modelling (Volker Springel)
 # 3 Time Integration Techniques
+
+# STARFORGE: Toward a comprehensive numerical model of star cluster formation and feedback (Michael Y. Grudić, Dávid Guszejnov, Philip F. Hopkins, Stella S. R. Offner, Claude-André Faucher-Giguère)
+# 2.3.2 Time integration
 
 function timestep_criterion(bodies::Vector{Body}) # timestep criterion
     global timestep = MaxTimestep * Julian_year # any timestep should be no larger than the user-specified maximum timestep (s)
@@ -78,7 +81,7 @@ function RungeKutta4th!(bodies::Vector{Body}, force_calculation!::Function) # 4t
     force_calculation!(bodies) # calculate accelerations for future use
 end
 
-function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function) # use Leapfrog method (KDK)
+function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function) # Leapfrog method, second-order Kick-Drift-Kick (KDK)
     for body in bodies
         body.velocity += body.acceleration * timestep / 2 # half step velocity update (Kick)
         body.position += body.velocity * timestep # full step position update (Drift)
@@ -91,22 +94,18 @@ function Leapfrog!(bodies::Vector{Body}, force_calculation!::Function) # use Lea
 end
 
 function modified4thHermite!(bodies::Vector{Body}, force_calculation!::Function) # modified 4th-order Hermite method
-    # calculate jerks
-    direct_summation_jerk!(bodies)
-    # calculate the intermediate state
-    temporary_bodies = deepcopy(bodies)
-    for i in 1:num_bodies
-        temporary_bodies[i].position += temporary_bodies[i].position + temporary_bodies[i].velocity .* timestep + temporary_bodies[i].acceleration .* timestep^2 ./ 2 + temporary_bodies[i].jerk .* timestep^3 ./ 6
-        temporary_bodies[i].velocity += temporary_bodies[i].velocity + temporary_bodies[i].acceleration .* timestep + temporary_bodies[i].jerk .* timestep^2 ./ 2
+    get_jerks!(bodies) # calculate jerks
+    last_bodies = deepcopy(bodies) # store last states
+    for (i, body) in enumerate(bodies) # perform the initial prediction step
+        last_bodies[i].position = body.position + body.velocity .* timestep + body.acceleration .* timestep^2 ./ 2 + body.jerk .* timestep^3 ./ 6
+        last_bodies[i].velocity = body.velocity + body.acceleration .* timestep + body.jerk .* timestep^2 ./ 2
     end
-    # calculate accelerations and jerks again
-    force_calculation!(temporary_bodies)
-    direct_summation_jerk!(temporary_bodies)
-    # perform the correction step
-    for i in 1:num_bodies
-        bodies[i].velocity += bodies[i].velocity + (bodies[i].acceleration + temporary_bodies[i].acceleration) .* timestep ./ 2 + (bodies[i].jerk - temporary_bodies[i].jerk) .* timestep^2 ./ 12
-        bodies[i].position += bodies[i].position + (bodies[i].velocity + temporary_bodies[i].velocity) .* timestep ./ 2 + (bodies[i].acceleration - temporary_bodies[i].acceleration) .* timestep^2 ./ 12
+    force_calculation!(last_bodies) # recalculate accelerations
+    get_jerks!(last_bodies) # recalculate jerks
+    for (i, body) in enumerate(bodies) # perform the correction step
+        last_bodies[i].velocity = body.velocity + (body.acceleration + last_bodies[i].acceleration) .* timestep ./ 2 + (body.jerk - last_bodies[i].jerk) .* timestep^2 ./ 12
+        body.position = body.position + (body.velocity + last_bodies[i].velocity) .* timestep ./ 2 + (body.acceleration - last_bodies[i].acceleration) .* timestep^2 ./ 12
+        body.velocity = last_bodies[i].velocity
     end
-    # calculate accelerations again again
-    force_calculation!(bodies)
+    force_calculation!(bodies) # recalculate accelerations again
 end

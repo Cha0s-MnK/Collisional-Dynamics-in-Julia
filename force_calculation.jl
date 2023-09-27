@@ -20,18 +20,6 @@ function get_force(body::Body, mass::Float64, position::MVector{3, Float64})::MV
     return force
 end
 
-function get_2jerks!(body1::Body, body2::Body)
-    # calculate exact jerks on 2 bodies
-
-    displacement = body2.position - body1.position # displacement vector
-    distance = norm(displacement) # distance scalar
-    relative_velocity = body2.velocity - body1.velocity # relative velocity vector
-    radial_velocity = dot(relative_velocity, displacement) / distance # radial velocity scalar
-    pre_jerk = - G * radial_velocity / distance^3
-    body1.jerk += body2.mass .* pre_jerk
-    body2.jerk -= body1.mass .* pre_jerk
-end
-
 function bound_pairs(bodies::Vector{Body})
     # criterion to avoid boud pairs
 
