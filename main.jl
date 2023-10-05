@@ -1,10 +1,12 @@
 # This is the main running file of the collisional N-body simulator.
-# Last edited by Cha0s_MnK on 2023/09/28.
+# Last edited by Cha0s_MnK on 2023/10/05.
 
 include("head.jl") # use necessary packages as long as set constants and global variables.
 include("time.jl") # use time integration techniques
 include("force.jl") # use gravitational force calculation methods
 include("helper.jl") # use some self-defined functions
+
+# side length of the simulation box is temporarily fixed as 1 pc
 
 # basic functions of the N-body simulator
 function generateBody()::Body # generate 1 random body with initial velocity, acceleration and jerk as zero
@@ -36,7 +38,7 @@ function generateKeplerBodies()::Vector{Body} # generate 2 bodies for Kepler pro
     return bodies
 end
 
-function periodic_boundary!(bodies::Vector{Body}) # apply periodic boundary condition to modify coordinates
+function periodic_boundary!(bodies::Vector{Body}) # use periodic boundary condition to modify coordinates
     for body in bodies
         for i in 1:3
             body.position[i] = mod(body.position[i] + total_length/2, total_length) - total_length/2
@@ -45,9 +47,10 @@ function periodic_boundary!(bodies::Vector{Body}) # apply periodic boundary cond
 end
 
 function simulate_step!(bodies::Vector{Body}, time_integration!::Function, force_calculation!::Function) # 1 simulation step using selected time integration technique and gravitational force calculation method
-    timestep_criterion(bodies)
+    timestep_criterion1(bodies) # use timestep criterion to modify timestep
+    #timestep_criterion2() # record the total simulation time
     time_integration!(bodies, force_calculation!) # main simulation step
-    periodic_boundary!(bodies) # apply periodic boundary condition to modify coordinates
+    periodic_boundary!(bodies) # use periodic boundary condition to modify coordinates
     #bound_pairs(bodies) # criterion to avoid boud pairs
 end
 
@@ -106,8 +109,10 @@ function main_KeplerEnergy(num_steps::Int) # main function that simulate Kepler 
         #simulate_step!(bodies, Leapfrog!, direct_summation!)
         simulate_step!(bodies, modified4thHermite!, direct_summation!)
     end
-    relative_energies = energies .- energies[1]
-    plot_energy(times, relative_energies, "Results/KeplerEnergy$num_name.png") # plot the energy-time curve and save it as a PNG file
+    relative_energies = energies .- energies[1] # use relative energies
+    #plot_energy(times, relative_energies, "Kepler/Energy_RungeKutta4th$num_name.png") # plot the energy-time curve and save it as a PNG file
+    #plot_energy(times, relative_energies, "Kepler/Energy_Leapfrog$num_name.png") # plot the energy-time curve and save it as a PNG file
+    plot_energy(times, relative_energies, "Kepler/Energy_modified4thHermite$num_name.png") # plot the energy-time curve and save it as a PNG file
 end
 
 run_main(main_KeplerEnergy)

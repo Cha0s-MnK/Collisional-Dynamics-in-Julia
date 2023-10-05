@@ -1,5 +1,5 @@
 # These are some time integration techniques to update the state of the bodies in 1 simulation step.
-# Last edited by Cha0s_MnK on 2023/09/28.
+# Last edited by Cha0s_MnK on 2023/10/05.
 
 # reference(s):
 
@@ -10,7 +10,7 @@
 # STARFORGE: Toward a comprehensive numerical model of star cluster formation and feedback (Michael Y. Grudić, Dávid Guszejnov, Philip F. Hopkins, Stella S. R. Offner, Claude-André Faucher-Giguère)
 # 2.3.2 Time integration
 
-function timestep_criterion(bodies::Vector{Body}) # timestep criterion
+function timestep_criterion1(bodies::Vector{Body}) # use timestep criterion to modify timestep
     global timestep = MaxTimestep * Julian_year # any timestep should be no larger than the user-specified maximum timestep (s)
     for i in 1:num_bodies # find the minimum timestep
         individual_timestep = 1.0e2 / norm(bodies[i].acceleration) # a free parameter to control the precision of simulation
@@ -20,6 +20,12 @@ function timestep_criterion(bodies::Vector{Body}) # timestep criterion
     if Timestep < MaxTimestep # print the shortened timestep
         println("New timestep = $Timestep Julian year")
     end
+    global TotalTime += Timestep # add current timestep to the total simulation time (Julian year)
+end
+
+function timestep_criterion2() # record the total simulation time
+    global timestep = MaxTimestep * Julian_year # any timestep should be no larger than the user-specified maximum timestep (s)
+    global Timestep = timestep / Julian_year # current timestep (Julian year)
     global TotalTime += Timestep # add current timestep to the total simulation time (Julian year)
 end
 

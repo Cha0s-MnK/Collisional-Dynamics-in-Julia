@@ -1,7 +1,9 @@
 # These are some very useful functions defined by Cha0s_MnK.
-# Last edited by Cha0s_MnK on 2023/09/27.
+# Last edited by Cha0s_MnK on 2023/10/05.
 
 function get_energy(bodies::Vector{Body})::Float64 # get the total energy of the N-body system (J)
+    # define a proper energy unit
+    energy_unit = G * solar_mass^2 / pc
     # calculate kinetic energy
     T = sum(0.5 * body.mass * sum(body.velocity.^2) for body in bodies)
     # calculate potential energy
@@ -12,7 +14,7 @@ function get_energy(bodies::Vector{Body})::Float64 # get the total energy of the
             V += - G * bodies[i].mass * bodies[j].mass / distance
         end
     end
-    return T + V
+    return (T + V) / energy_unit
 end
 
 function get2jerk!(body1::Body, body2::Body) # get jerks between 2 bodies
@@ -36,6 +38,20 @@ function get_jerks!(bodies::Vector{Body}) # get jerks for each body using direct
             get2jerk!(bodies[i], bodies[j])
         end
     end
+end
+
+function check_relaxation_time() # check the relaxation time criterion (only for the same mass)
+    # calculate the relaxation time
+    relaxation_time = num_bodies / (8 * log(num_bodies)) * total_length * sqrt(total_length / (G * num_bodies * mean_mass)) / Julian_year
+    # check whether the relaxation time is much larger than the maximum timestep
+    println("Relaxation time = $relaxation_time Julian_year >> Maximum timestep = $MaxTimestep Julian_year")
+end
+
+function run_main(main::Function) # run the selected main function
+    running_time = @elapsed main(num_steps) # (s)
+    println("Running time: $running_time seconds") # print the running time
+    #check_relaxation_time() # check the relaxation time criterion (only for the same mass)
+    println("Total simulation time = $TotalTime Julian year") # print the total simulation time
 end
 
 function plotBodies(bodies::Vector{Body}, title0::AbstractString)
@@ -140,4 +156,18 @@ function plotCellEdges(cell::Cell)
             plot!([corners[i][1], corners[j][1]],[corners[i][2], corners[j][2]],[corners[i][3], corners[j][3]], color=:blue, linewidth=0.5)
         end
     end
+end
+
+function plot_energy(times::Vector{Float64}, energies::Vector{Float64}, name::AbstractString) # plot the time evolution of the total energy
+    canvas = plot( # create an empty canvas for plot
+        size = (1080, 720),
+        title = "Total energy over time \n\n Number of bodies = $num_bodies \n Mass = $Mean_mass solar mass",
+        titlefontfamily = "Times New Roman", titlefontsize = 12,
+        legend = false, legendfontfamily = "Times New Roman", legendfontsize = 8,
+        tickfontfamily = "Times New Roman", tickfontsize = 8,
+        xlabel = "Time (Julian year)", xlabelfontfamily = "Times New Roman", xlabelfontsize = 10, 
+        ylabel = "Total energy (J)", ylabelfontfamily = "Times New Roman", ylabelfontsize = 10
+    )
+    plot!(canvas, times, energies)
+    savefig(canvas, name) # save the plot as a PNG file
 end
